@@ -1,0 +1,35 @@
+{
+    "workbench.colorTheme": "Solarized Dark",
+
+    "terminal.integrated.defaultProfile.windows": "Git Bash",
+    "terminal.integrated.profiles.windows": {
+        "Git Bash": {
+            "path": "C:\\Program Files\\Git\\bin\\bash.exe",
+            "args": ["-i", "-l"],
+            "icon": "terminal"
+        },
+        "corhild local": {
+            "path": "C:\\Program Files\\Git\\bin\\bash.exe",
+            "args": ["-i", "-c", "ssh corhild-local; exec bash -i"],
+            "icon": "server-environment"
+        },
+        "corhild staging": {
+            "path": "C:\\Program Files\\Git\\bin\\bash.exe",
+            "args": ["-i", "-c", "ssh corhild-staging; exec bash -i"],
+            "icon": "beaker"
+        },
+        "corhild prod": {
+            "path": "C:\\Program Files\\Git\\bin\\bash.exe",
+            "args": ["-i", "-c", "ssh corhild-prod; exec bash -i"],
+            "icon": "shield"
+        }
+    },
+
+    "remote.SSH.connectTimeout": 30,
+    "remote.SSH.showLoginTerminal": true,
+
+    "editor.fontSize": 14,
+    "editor.minimap.enabled": false,
+    "explorer.confirmDelete": false,
+    "explorer.confirmDragAndDrop": false
+}

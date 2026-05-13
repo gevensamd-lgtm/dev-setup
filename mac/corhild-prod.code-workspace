@@ -1,0 +1,16 @@
+{
+  "folders": [
+    {
+      "name": "prod — facturacion",
+      "uri": "vscode-remote://ssh-remote+corhild/home/geison/projects/facturacion-cr"
+    }
+  ],
+  "settings": {
+    "terminal.integrated.defaultProfile.osx": "corhild prod",
+    "files.readonlyInclude": { "**/*": true },
+    "workbench.colorCustomizations": {
+      "titleBar.activeBackground": "#4a1a1a",
+      "titleBar.activeForeground": "#ffffff"
+    }
+  }
+}

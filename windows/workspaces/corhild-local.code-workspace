@@ -1,0 +1,13 @@
+{
+    "folders": [
+        {
+            "name": "local — server",
+            "uri": "vscode-remote://ssh-remote+corhild-local/home/geison/projects"
+        }
+    ],
+    "settings": {
+        "terminal.integrated.defaultProfile.windows": "corhild local",
+        "dev.containers.dockerPath": "",
+        "remote.containers.dockerPath": ""
+    }
+}

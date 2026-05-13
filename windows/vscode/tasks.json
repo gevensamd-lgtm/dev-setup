@@ -1,0 +1,21 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Upload clipboard → corhild",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy", "Bypass",
+        "-File", "${userHome}\\scripts\\upload.ps1"
+      ],
+      "presentation": {
+        "reveal": "never",
+        "panel": "dedicated",
+        "close": true,
+        "focus": false
+      },
+      "problemMatcher": []
+    }
+  ]
+}

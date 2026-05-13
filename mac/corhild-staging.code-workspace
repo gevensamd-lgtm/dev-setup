@@ -1,0 +1,15 @@
+{
+  "folders": [
+    {
+      "name": "staging — facturacion",
+      "uri": "vscode-remote://ssh-remote+corhild/home/geison/projects/facturacion-cr"
+    }
+  ],
+  "settings": {
+    "terminal.integrated.defaultProfile.osx": "corhild staging",
+    "workbench.colorCustomizations": {
+      "titleBar.activeBackground": "#1a4a2e",
+      "titleBar.activeForeground": "#ffffff"
+    }
+  }
+}

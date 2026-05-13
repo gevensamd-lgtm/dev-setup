@@ -1,0 +1,5 @@
+*.env
+*.pem
+*.key
+id_*
+known_hosts
