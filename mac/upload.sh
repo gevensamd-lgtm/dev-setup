@@ -6,7 +6,6 @@ set -euo pipefail
 
 SERVER="corhild"
 REMOTE_DIR="/home/geison/tmp"
-NAME="${1:-file}"
 TS=$(date +%Y%m%d-%H%M%S)
 TMP=$(mktemp /tmp/upload-XXXX)
 trap "rm -f $TMP" EXIT
@@ -14,21 +13,54 @@ trap "rm -f $TMP" EXIT
 LOCAL_FILE=""
 FILENAME=""
 
+# Slugifica: minúsculas, espacios/símbolos → guiones, sin acentos
+slugify() {
+    echo "$1" \
+        | iconv -f UTF-8 -t ASCII//TRANSLIT 2>/dev/null \
+        | tr '[:upper:]' '[:lower:]' \
+        | tr -c 'a-z0-9.' '-' \
+        | sed -E 's/-+/-/g; s/^-+//; s/-+$//'
+}
+
+# 0. $1 es una ruta a archivo (drag desde Finder al terminal, o `upload ~/foo.pdf`)
+if [ -n "${1:-}" ] && [ -f "$1" ]; then
+    BASENAME=$(basename "$1")
+    NAME="${BASENAME%.*}"
+    EXT="${BASENAME##*.}"
+    [ "$EXT" = "$BASENAME" ] && EXT="bin"
+    NAME=$(slugify "$NAME")
+    EXT=$(slugify "$EXT")
+    [ -z "$NAME" ] && NAME="file"
+    FILENAME="${TS}-${NAME}.${EXT}"
+    cp "$1" "$TMP"
+    LOCAL_FILE="$TMP"
+else
+    NAME=$(slugify "${1:-file}")
+    [ -z "$NAME" ] && NAME="file"
+fi
+
 # 1. Archivo copiado desde Finder (Cmd+C) — cubre TODO tipo: PDF, zip, docx, png, etc.
-FINDER_PATH=$(osascript 2>/dev/null << 'EOF'
+if [ -z "$LOCAL_FILE" ]; then
+    FINDER_PATH=$(osascript 2>/dev/null << 'EOF'
 try
     set f to the clipboard as «class furl»
     POSIX path of f
 end try
 EOF
 )
-FINDER_PATH=$(echo "$FINDER_PATH" | tr -d '\n ')
-if [ -n "$FINDER_PATH" ] && [ -f "$FINDER_PATH" ]; then
-    EXT="${FINDER_PATH##*.}"
-    [ -z "$EXT" ] || [ "$EXT" = "$FINDER_PATH" ] && EXT="bin"
-    FILENAME="${TS}-${NAME}.${EXT}"
-    cp "$FINDER_PATH" "$TMP"
-    LOCAL_FILE="$TMP"
+    FINDER_PATH=$(echo "$FINDER_PATH" | tr -d '\n')
+    if [ -n "$FINDER_PATH" ] && [ -f "$FINDER_PATH" ]; then
+        BASE=$(basename "$FINDER_PATH")
+        FNAME="${BASE%.*}"
+        EXT="${BASE##*.}"
+        [ "$EXT" = "$BASE" ] && EXT="bin"
+        FNAME=$(slugify "$FNAME")
+        EXT=$(slugify "$EXT")
+        [ -z "$FNAME" ] && FNAME="$NAME"
+        FILENAME="${TS}-${FNAME}.${EXT}"
+        cp "$FINDER_PATH" "$TMP"
+        LOCAL_FILE="$TMP"
+    fi
 fi
 
 # 2. Imagen del clipboard (screenshot Cmd+Shift+4 o imagen copiada)
@@ -112,14 +144,13 @@ fi
 
 CLAUDE_REF="@${REMOTE_PATH}"
 
-# Limpiar clipboard antes de tipear (evita auto-paste de VS Code)
-printf '' | pbcopy
-
-# Notificación macOS
-osascript -e "display notification \"$FILENAME\" with title \"Upload OK ✓ auto-pegado\"" 2>/dev/null
-
-# Auto-tipear en VS Code — nunca va al clipboard
-osascript 2>/dev/null << APPLESCRIPT
+# Contexto: VS Code auto-tipea local; Warp/Terminal/iTerm/SSH copian al clipboard
+case "${TERM_PROGRAM:-}" in
+    vscode)
+        # VS Code: limpiar clipboard y auto-tipear en la ventana de Code
+        printf '' | pbcopy
+        osascript -e "display notification \"$FILENAME\" with title \"Upload OK ✓ auto-pegado en VS Code\"" 2>/dev/null
+        osascript 2>/dev/null << APPLESCRIPT
 delay 0.3
 tell application "System Events"
     tell process "Code"
@@ -129,3 +160,11 @@ tell application "System Events"
     keystroke "${CLAUDE_REF}"
 end tell
 APPLESCRIPT
+        ;;
+    *)
+        # Warp / Terminal / iTerm / SSH remoto: dejar @path en clipboard, usuario pega con Cmd+V
+        printf '%s' "$CLAUDE_REF" | pbcopy
+        osascript -e "display notification \"$CLAUDE_REF — pega con Cmd+V\" with title \"Upload OK ✓ en clipboard\"" 2>/dev/null
+        echo "$CLAUDE_REF"
+        ;;
+esac

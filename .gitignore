@@ -3,3 +3,4 @@
 *.key
 id_*
 known_hosts
+.DS_Store
