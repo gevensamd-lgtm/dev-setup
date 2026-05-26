@@ -6,6 +6,7 @@ set -euo pipefail
 
 SERVER="corhild"
 REMOTE_DIR="/home/geison/tmp"
+WEBDAV_DIR="/Volumes/files/tmp"
 TS=$(date +%Y%m%d-%H%M%S)
 TMP=$(mktemp /tmp/upload-XXXX)
 trap "rm -f $TMP" EXIT
@@ -136,9 +137,11 @@ fi
 
 REMOTE_PATH="${REMOTE_DIR}/${FILENAME}"
 
-# SCP al servidor
-if ! scp -q "$LOCAL_FILE" "${SERVER}:${REMOTE_PATH}" 2>/dev/null; then
-    osascript -e 'display notification "No se pudo conectar a corhild" with title "Upload: error"' 2>/dev/null
+# WebDAV preferido, scp fallback
+if [ -d "$WEBDAV_DIR" ] && cp "$LOCAL_FILE" "${WEBDAV_DIR}/${FILENAME}" 2>/dev/null; then
+    :
+elif ! scp -q "$LOCAL_FILE" "${SERVER}:${REMOTE_PATH}" 2>/dev/null; then
+    osascript -e 'display notification "WebDAV no montado y scp falló" with title "Upload: error"' 2>/dev/null
     exit 1
 fi
 

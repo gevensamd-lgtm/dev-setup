@@ -10,6 +10,7 @@ export PATH="/Users/gevensa/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin
 
 SERVER="corhild"
 REMOTE_DIR="/home/geison/tmp"
+WEBDAV_DIR="/Volumes/files/tmp"
 TS=$(date +%Y%m%d-%H%M%S)
 TMP=$(mktemp /tmp/upload-XXXX)
 trap "rm -f $TMP" EXIT
@@ -90,13 +91,18 @@ fi
 
 REMOTE_PATH="${REMOTE_DIR}/${FILENAME}"
 
-if ! scp -q -o ConnectTimeout=10 "$LOCAL_FILE" "${SERVER}:${REMOTE_PATH}" 2>/dev/null; then
-    osascript -e 'display notification "scp falló — revisa SSH a corhild" with title "Upload: error"' 2>/dev/null
+# WebDAV mount preferido (instantáneo), scp como fallback
+if [ -d "$WEBDAV_DIR" ] && cp "$LOCAL_FILE" "${WEBDAV_DIR}/${FILENAME}" 2>/dev/null; then
+    METHOD="webdav"
+elif scp -q -o ConnectTimeout=10 "$LOCAL_FILE" "${SERVER}:${REMOTE_PATH}" 2>/dev/null; then
+    METHOD="scp"
+else
+    osascript -e 'display notification "WebDAV no montado y scp falló" with title "Upload: error"' 2>/dev/null
     exit 1
 fi
 
 # @path al clipboard — el usuario lo pega con Cmd+V donde quiera
 printf '%s' "@${REMOTE_PATH}" | pbcopy
 
-osascript -e "display notification \"$FILENAME — Cmd+V para pegar\" with title \"Upload ✓\"" 2>/dev/null
+osascript -e "display notification \"$FILENAME — Cmd+V para pegar\" with title \"Upload ✓ ($METHOD)\"" 2>/dev/null
 echo "@${REMOTE_PATH}"
