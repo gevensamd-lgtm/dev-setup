@@ -1,0 +1,20 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "upload",
+      "type": "process",
+      "command": "/Users/gevensa/.local/bin/upload",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": true,
+        "close": true,
+        "focus": false,
+        "echo": false
+      },
+      "problemMatcher": []
+    }
+  ]
+}
