@@ -147,27 +147,7 @@ fi
 
 CLAUDE_REF="@${REMOTE_PATH}"
 
-# Contexto: VS Code auto-tipea local; Warp/Terminal/iTerm/SSH copian al clipboard
-case "${TERM_PROGRAM:-}" in
-    vscode)
-        # VS Code: limpiar clipboard y auto-tipear en la ventana de Code
-        printf '' | pbcopy
-        osascript -e "display notification \"$FILENAME\" with title \"Upload OK ✓ auto-pegado en VS Code\"" 2>/dev/null
-        osascript 2>/dev/null << APPLESCRIPT
-delay 0.3
-tell application "System Events"
-    tell process "Code"
-        set frontmost to true
-    end tell
-    delay 0.4
-    keystroke "${CLAUDE_REF}"
-end tell
-APPLESCRIPT
-        ;;
-    *)
-        # Warp / Terminal / iTerm / SSH remoto: dejar @path en clipboard, usuario pega con Cmd+V
-        printf '%s' "$CLAUDE_REF" | pbcopy
-        osascript -e "display notification \"$CLAUDE_REF — pega con Cmd+V\" with title \"Upload OK ✓ en clipboard\"" 2>/dev/null
-        echo "$CLAUDE_REF"
-        ;;
-esac
+# @path al clipboard. Cmd+V manual en cualquier app (VS Code, Warp, Terminal, SSH).
+printf '%s' "$CLAUDE_REF" | pbcopy
+osascript -e "display notification \"$FILENAME — Cmd+V para pegar\" with title \"Upload ✓\"" 2>/dev/null
+echo "$CLAUDE_REF"
