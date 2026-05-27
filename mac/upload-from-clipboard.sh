@@ -39,23 +39,36 @@ handle_finder_file() {
 LOCAL_FILE=""
 FILENAME=""
 
-# 1. Imagen — intenta GIF primero (validando magic bytes), sino PNG
-osascript >/dev/null 2>&1 <<OSASCRIPT
-try
-set gifData to the clipboard as «class GIFf»
-set f to open for access POSIX file "$TMP" with write permission
-set eof f to 0
-write gifData to f
-close access f
-end try
-OSASCRIPT
+# 1. Imagen — JXA con NSPasteboard para detección real por UTI
+IMG_KIND=$(osascript -l JavaScript <<'JXA' 2>/dev/null
+ObjC.import('AppKit');
+var pb = $.NSPasteboard.generalPasteboard;
+var types = ObjC.deepUnwrap(pb.types) || [];
+var has = (t) => types.indexOf(t) !== -1;
+if (has('com.compuserve.gif')) { 'gif'; }
+else if (has('public.png') || has('public.tiff') || has('com.apple.icns')) { 'png'; }
+else { 'none'; }
+JXA
+)
 
-if [ -s "$TMP" ] && [ "$(head -c 4 "$TMP" 2>/dev/null)" = "GIF8" ]; then
-    FILENAME="${TS}-image.gif"
-    LOCAL_FILE="$TMP"
-elif pngpaste "$TMP" 2>/dev/null && [ "$(wc -c < "$TMP")" -gt 100 ]; then
-    FILENAME="${TS}-screenshot.png"
-    LOCAL_FILE="$TMP"
+if [ "$IMG_KIND" = "gif" ]; then
+    osascript -l JavaScript >/dev/null 2>&1 <<JXA
+ObjC.import('AppKit');
+var pb = $.NSPasteboard.generalPasteboard;
+var data = pb.dataForType('com.compuserve.gif');
+if (data && data.length > 0) {
+    data.writeToFileAtomically('$TMP', true);
+}
+JXA
+    if [ -s "$TMP" ] && [ "$(head -c 4 "$TMP" 2>/dev/null)" = "GIF8" ]; then
+        FILENAME="${TS}-image.gif"
+        LOCAL_FILE="$TMP"
+    fi
+elif [ "$IMG_KIND" = "png" ]; then
+    if pngpaste "$TMP" 2>/dev/null && [ "$(wc -c < "$TMP")" -gt 100 ]; then
+        FILENAME="${TS}-screenshot.png"
+        LOCAL_FILE="$TMP"
+    fi
 fi
 
 # 2. Archivo desde Finder (cualquier tipo)
