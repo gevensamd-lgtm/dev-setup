@@ -1,9 +1,11 @@
 #!/bin/bash
 # upload-from-clipboard — sube cualquier archivo/imagen del clipboard a corhild
-# Flujos detectados:
-#   1. Imagen (PNG, GIF nativo)
-#   2. Archivo desde Finder (Cmd+C) — cualquier tipo: mp4, zip, docx, mov, etc.
-#   3. PDF copiado desde Preview/Safari (data)
+# Prioridad:
+#   1. Archivo desde Finder (Cmd+C en archivo) — TOMA EL ARCHIVO REAL no su ícono
+#   2. Imagen del clipboard (screenshot/CleanShot/copy image desde browser)
+#      - GIF nativo si com.compuserve.gif presente
+#      - PNG en otros casos via pngpaste
+#   3. PDF copiado desde Preview/Safari (clipboard data)
 #   4. Texto que es ruta absoluta a archivo existente
 # Si clipboard solo es texto → exit 0 (daemon pega texto normal)
 
@@ -24,7 +26,7 @@ slugify() {
         | sed -E 's/-+/-/g; s/^-+//; s/-+$//'
 }
 
-handle_finder_file() {
+handle_file() {
     local path="$1"
     local base=$(basename "$path")
     local name=$(slugify "${base%.*}")
@@ -39,8 +41,18 @@ handle_finder_file() {
 LOCAL_FILE=""
 FILENAME=""
 
-# 1. Imagen — JXA con NSPasteboard para detección real por UTI
-IMG_KIND=$(osascript -l JavaScript <<'JXA' 2>/dev/null
+# 1. Archivo Finder PRIMERO — evita capturar el ícono en vez del archivo
+FINDER_PATH=$(osascript -e 'try
+the clipboard as «class furl»
+POSIX path of result
+end try' 2>/dev/null | tr -d '\n')
+if [ -n "$FINDER_PATH" ] && [ -f "$FINDER_PATH" ]; then
+    handle_file "$FINDER_PATH"
+fi
+
+# 2. Imagen del clipboard (solo si NO había archivo Finder)
+if [ -z "$LOCAL_FILE" ]; then
+    IMG_KIND=$(osascript -l JavaScript <<'JXA' 2>/dev/null
 ObjC.import('AppKit');
 var pb = $.NSPasteboard.generalPasteboard;
 var types = ObjC.deepUnwrap(pb.types) || [];
@@ -50,9 +62,8 @@ else if (has('public.png') || has('public.tiff') || has('com.apple.icns')) { 'pn
 else { 'none'; }
 JXA
 )
-
-if [ "$IMG_KIND" = "gif" ]; then
-    osascript -l JavaScript >/dev/null 2>&1 <<JXA
+    if [ "$IMG_KIND" = "gif" ]; then
+        osascript -l JavaScript >/dev/null 2>&1 <<JXA
 ObjC.import('AppKit');
 var pb = $.NSPasteboard.generalPasteboard;
 var data = pb.dataForType('com.compuserve.gif');
@@ -60,38 +71,28 @@ if (data && data.length > 0) {
     data.writeToFileAtomically('$TMP', true);
 }
 JXA
-    if [ -s "$TMP" ] && [ "$(head -c 4 "$TMP" 2>/dev/null)" = "GIF8" ]; then
-        FILENAME="${TS}-image.gif"
-        LOCAL_FILE="$TMP"
-    fi
-elif [ "$IMG_KIND" = "png" ]; then
-    if pngpaste "$TMP" 2>/dev/null && [ "$(wc -c < "$TMP")" -gt 100 ]; then
-        FILENAME="${TS}-screenshot.png"
-        LOCAL_FILE="$TMP"
-    fi
-fi
-
-# 2. Archivo desde Finder (cualquier tipo)
-if [ -z "$LOCAL_FILE" ]; then
-    FINDER_PATH=$(osascript -e 'try
-the clipboard as «class furl»
-POSIX path of result
-end try' 2>/dev/null | tr -d '\n')
-    if [ -n "$FINDER_PATH" ] && [ -f "$FINDER_PATH" ]; then
-        handle_finder_file "$FINDER_PATH"
+        if [ -s "$TMP" ] && [ "$(head -c 4 "$TMP" 2>/dev/null)" = "GIF8" ]; then
+            FILENAME="${TS}-image.gif"
+            LOCAL_FILE="$TMP"
+        fi
+    elif [ "$IMG_KIND" = "png" ]; then
+        if pngpaste "$TMP" 2>/dev/null && [ "$(wc -c < "$TMP")" -gt 100 ]; then
+            FILENAME="${TS}-screenshot.png"
+            LOCAL_FILE="$TMP"
+        fi
     fi
 fi
 
 # 3. PDF desde Preview/Safari (clipboard data)
 if [ -z "$LOCAL_FILE" ]; then
-    CLIP_TYPES="${CLIP_TYPES:-$(osascript -e 'try
+    CLIP_TYPES=$(osascript -e 'try
 set t to (clipboard info)
 set out to ""
 repeat with i in t
 set out to out & (item 1 of i as string) & ","
 end repeat
 return out
-end try' 2>/dev/null)}"
+end try' 2>/dev/null)
     if echo "$CLIP_TYPES" | grep -qi "pdf"; then
         osascript >/dev/null 2>&1 <<OSASCRIPT
 try
@@ -113,7 +114,7 @@ fi
 if [ -z "$LOCAL_FILE" ]; then
     PBTEXT=$(pbpaste 2>/dev/null | head -1)
     if [ -n "$PBTEXT" ] && [ -f "$PBTEXT" ]; then
-        handle_finder_file "$PBTEXT"
+        handle_file "$PBTEXT"
     fi
 fi
 
