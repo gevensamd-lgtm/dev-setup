@@ -39,18 +39,8 @@ handle_finder_file() {
 LOCAL_FILE=""
 FILENAME=""
 
-# 1. Imagen (PNG default, GIF si nativo)
-if pngpaste "$TMP" 2>/dev/null && [ "$(wc -c < "$TMP")" -gt 100 ]; then
-    CLIP_TYPES=$(osascript -e 'try
-set t to (clipboard info)
-set out to ""
-repeat with i in t
-set out to out & (item 1 of i as string) & ","
-end repeat
-return out
-end try' 2>/dev/null)
-    if echo "$CLIP_TYPES" | grep -qi "GIFf\|com.compuserve.gif"; then
-        osascript >/dev/null 2>&1 <<OSASCRIPT
+# 1. Imagen — intenta GIF primero (validando magic bytes), sino PNG
+osascript >/dev/null 2>&1 <<OSASCRIPT
 try
 set gifData to the clipboard as «class GIFf»
 set f to open for access POSIX file "$TMP" with write permission
@@ -59,10 +49,12 @@ write gifData to f
 close access f
 end try
 OSASCRIPT
-        FILENAME="${TS}-image.gif"
-    else
-        FILENAME="${TS}-screenshot.png"
-    fi
+
+if [ -s "$TMP" ] && [ "$(head -c 4 "$TMP" 2>/dev/null)" = "GIF8" ]; then
+    FILENAME="${TS}-image.gif"
+    LOCAL_FILE="$TMP"
+elif pngpaste "$TMP" 2>/dev/null && [ "$(wc -c < "$TMP")" -gt 100 ]; then
+    FILENAME="${TS}-screenshot.png"
     LOCAL_FILE="$TMP"
 fi
 
