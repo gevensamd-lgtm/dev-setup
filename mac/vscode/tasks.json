@@ -3,8 +3,14 @@
   "tasks": [
     {
       "label": "upload",
-      "type": "process",
+      "type": "shell",
       "command": "/Users/gevensa/.local/bin/upload",
+      "options": {
+        "shell": {
+          "executable": "/bin/bash",
+          "args": ["-c"]
+        }
+      },
       "presentation": {
         "reveal": "silent",
         "panel": "shared",
