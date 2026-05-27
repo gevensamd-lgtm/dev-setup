@@ -1,7 +1,1 @@
-[
-  {
-    "key": "cmd+shift+u",
-    "command": "workbench.action.tasks.runTask",
-    "args": "upload"
-  }
-]
+[]
