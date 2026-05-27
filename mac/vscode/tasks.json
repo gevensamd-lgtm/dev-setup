@@ -5,7 +5,7 @@
       "label": "upload",
       "type": "process",
       "command": "/bin/bash",
-      "args": ["/Users/gevensa/.local/bin/upload"],
+      "args": ["/opt/homebrew/bin/upload"],
       "presentation": {
         "reveal": "silent",
         "panel": "shared",
