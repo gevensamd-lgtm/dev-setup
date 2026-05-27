@@ -22,9 +22,31 @@ slugify() {
 LOCAL_FILE=""
 FILENAME=""
 
-# 1. Imagen (más rápido, <50ms)
+# 1. Imagen — detecta GIF antes de pngpaste (que convierte todo a PNG)
 if pngpaste "$TMP" 2>/dev/null && [ "$(wc -c < "$TMP")" -gt 100 ]; then
-    FILENAME="${TS}-screenshot.png"
+    CLIP_TYPES=$(osascript -e 'try
+set t to (clipboard info)
+set out to ""
+repeat with i in t
+set out to out & (item 1 of i as string) & ","
+end repeat
+return out
+end try' 2>/dev/null)
+    if echo "$CLIP_TYPES" | grep -qi "GIFf\|com.compuserve.gif"; then
+        # Re-extraer como GIF nativo
+        osascript >/dev/null 2>&1 <<OSASCRIPT
+try
+set gifData to the clipboard as «class GIFf»
+set f to open for access POSIX file "$TMP" with write permission
+set eof f to 0
+write gifData to f
+close access f
+end try
+OSASCRIPT
+        FILENAME="${TS}-image.gif"
+    else
+        FILENAME="${TS}-screenshot.png"
+    fi
     LOCAL_FILE="$TMP"
 else
     # 2. Archivo desde Finder
